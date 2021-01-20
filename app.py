@@ -16,3 +16,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
         self.db = Database()
+        self.movies_list.setAcceptRichText(True)
+        self.btn_create_movie.pressed.connect(self.printMovies)
+
+    def printMovies(self):
+        self.movies_list.clear()
+        cursor = self.movies_list.textCursor()
+        cursor.insertHtml('<ul>')
+        for movie in range(15):
+            self.movies_list.append(f'<li>{movie}</li>')
+        cursor.insertHtml('</ul>')
