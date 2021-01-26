@@ -37,7 +37,7 @@ class Database():
     def get_movies(self):
         cursor: sqlite3.cursor = self.connection.cursor()
         movies = cursor.execute("SELECT * from movies").fetchall()
-        print(movies)
+        #print(movies)
 
     #  удаление
     def delete_movies(self):
