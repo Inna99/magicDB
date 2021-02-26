@@ -2,7 +2,7 @@ from functools import wraps
 from PyQt5 import QtWidgets, uic
 from datetime import date
 from config import UI_MAIN_WINDOW, DESIGN_DIR
-from database.connection_orm import Movies, Connect, db
+from database.connection_orm import Movies, Connect
 
 Ui_MainWindow, _ = uic.loadUiType(UI_MAIN_WINDOW, import_from=DESIGN_DIR)
 Item = QtWidgets.QTableWidgetItem  # shortcut
@@ -10,12 +10,17 @@ Item = QtWidgets.QTableWidgetItem  # shortcut
 
 def print_movies_from_db(self):
     self.clear_table()
+    self.movies_list.setHorizontalHeaderLabels(["title", "year", "viewed"])
+    self.id_dict = {}
     for row, movie in enumerate(Movies.select()):
+        #  какая то ошибка связанная с тем, что при удалении строк
+
         self.id_dict[row] = movie.id
         self.movies_list.insertRow(self.movies_list.rowCount())
         self.movies_list.setItem(row, 0, Item(movie.title))
         self.movies_list.setItem(row, 1, Item(str(movie.production_year)))
         self.movies_list.setItem(row, 2, Item(str(movie.viewed)))
+    print(self.id_dict)
 
 
 def refresh_table(func):
@@ -44,19 +49,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.btn_update_movies.pressed.connect(lambda: print_movies_from_db(self))
         self.btn_create_movie.pressed.connect(self.add_movie)
         self.btn_delete_by_id.pressed.connect(self.delete_by_id)
-        self.create_table()
+        #self.create_table()
         self.create_menu()
         self.movies_list.itemChanged.connect(self.item_changed)
-        self.id_dict = {}  # можно использовать список
+        self.id_dict = {}  # можно использовать список /  можно удалить отсюда
         print_movies_from_db(self)
-        self.movies_list.setHorizontalHeaderLabels(["title", "year", "viewed"])
 
     #  @refresh_table
     def item_changed(self, item: QtWidgets.QTableWidgetItem):
         column_name = ('title', 'production_year', 'viewed')
         if column_name[item.column()] == 'title':
             field = {column_name[item.column()]: item.text()}  # field for change {id: 'value'}
-            result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
+#            result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
+            result = Movies.update(title=item.text())
+
         # elif column_name[item.column()] == 'production_year':
         #     # подключить виджет для корректного ввода данных?
         #     field = {column_name[item.column()]: item.text()}  # field for change {id: 'value'}
@@ -70,7 +76,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def clear_table(self):
         self.movies_list.clear()
         self.movies_list.setRowCount(0)
-        self.create_table()
+        #self.create_table()
 
     @refresh_table
     def add_movie(self):
@@ -85,35 +91,30 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             Movies.create(title=line_title, production_year=date(int(line_production_year), 1, 1), viewed=viewed)
 
     @refresh_table
-    def delete_by_id(self, id_row=0):
+    def delete_by_id(self, id_row):
         """ button btn_delete_by_id """
-        id_row = Movies.select().order_by(Movies.id.desc()).get()
-
+        # if id_row == -1:
+        #     id_row = Movies.select().order_by(Movies.id.desc()).get()
         try:
-            #  Movies.select().order_by(Movies.id.desc()).get().delete_instance()
-            Movies.select().order_by(Movies.id == id).get().delete_instance()
+            Movies.select().where(Movies.id == id_row).get().delete_instance()
         except Exception:
             pass
 
     @refresh_table
     def add_row(self, movie: Movies = None) -> Movies:
         return Movies.create(title='Null', production_year=date(1900, 1, 1), viewed=False)
-        #  self.movies_list.insertRow(self.movies_list.rowCount())
-        #  self.addMovie()
 
-    def create_table(self):
-        for i, column in enumerate(self.columns):
-            self.movies_list.setHorizontalHeaderItem(i, Item(column))
+    # def create_table(self):
+    #     for i, column in enumerate(self.columns):
+    #         self.movies_list.setHorizontalHeaderItem(i, Item(column))
 
     def delete_row(self):
-        row = self.movies_list.currentRow()
-        # это номер строки в movies_list
-        # чтобы удалить нужно найти id этого фильма
-        # как соотнести выделенную строку movies_list и строку в БД???
-        self.movies_list.removeRow(row)
-        # id = Movies.select().order_by(Movies.id.desc()).get()
-
-        # self.deleteById(row)
+        if len(self.id_dict) != 0:
+            row = self.movies_list.currentRow()
+            id_row = self.id_dict[row]
+            self.delete_by_id(id_row)
+        else:
+            self.create_qmessage_box_without_choice('', 'Записей в базе нет')
 
     def clear_all(self):
         print('called clearAll')
@@ -193,3 +194,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         reply = QtWidgets.QMessageBox.question(self, title, msg, (QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No),
                                                QtWidgets.QMessageBox.No)
         return reply == QtWidgets.QMessageBox.Yes
+
+    def create_qmessage_box_without_choice(self, title: str, msg: str):
+        QtWidgets.QMessageBox.question(self, title, msg, QtWidgets.QMessageBox.Ok,
+                                       QtWidgets.QMessageBox.Ok)
+
