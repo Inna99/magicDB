@@ -13,8 +13,6 @@ def print_movies_from_db(self):
     self.movies_list.setHorizontalHeaderLabels(["title", "year", "viewed"])
     self.id_dict = {}
     for row, movie in enumerate(Movies.select()):
-        #  какая то ошибка связанная с тем, что при удалении строк
-
         self.id_dict[row] = movie.id
         self.movies_list.insertRow(self.movies_list.rowCount())
         self.movies_list.setItem(row, 0, Item(movie.title))
@@ -48,8 +46,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.btn_update_movies.pressed.connect(lambda: print_movies_from_db(self))
         self.btn_create_movie.pressed.connect(self.add_movie)
-        self.btn_delete_by_id.pressed.connect(self.delete_by_id)
-        #self.create_table()
+        #  self.btn_delete_by_id.pressed.connect(self.delete_by_id)
+        #  self.create_table()
         self.create_menu()
         self.movies_list.itemChanged.connect(self.item_changed)
         self.id_dict = {}  # можно использовать список /  можно удалить отсюда
@@ -58,29 +56,30 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     #  @refresh_table
     def item_changed(self, item: QtWidgets.QTableWidgetItem):
         column_name = ('title', 'production_year', 'viewed')
+
         if column_name[item.column()] == 'title':
             field = {column_name[item.column()]: item.text()}  # field for change {id: 'value'}
-#            result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
-            result = Movies.update(title=item.text())
-
-        # elif column_name[item.column()] == 'production_year':
-        #     # подключить виджет для корректного ввода данных?
-        #     field = {column_name[item.column()]: item.text()}  # field for change {id: 'value'}
-        #     result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
+            result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
+            #  result = Movies.update(title=item.text()) не работает
+        elif column_name[item.column()] == 'production_year':
+            try:
+                #  подключить виджет для корректного ввода данных?
+                field = {column_name[item.column()]: item.text()}
+                result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
+            except Exception:  #  peewee.
+                self.create_qmessage_box_without_choice('', "Неправильый формат даты\nправильно ГГГГ-ММ-ДД")
         elif column_name[item.column()] == 'viewed':
             field = {column_name[item.column()]: item.text() == 'True'}
             result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
 
-        #  print(f"item changed {item.row()} {item.column()}")  # item.text() - value
-
     def clear_table(self):
         self.movies_list.clear()
         self.movies_list.setRowCount(0)
-        #self.create_table()
+        #  self.create_table()
 
     @refresh_table
     def add_movie(self):
-        '''  button btn_create_movie  '''
+        """ button btn_create_movie """
         line_title = self.line_title.text()
         line_production_year = self.line_production_year.text()
         viewed = self.checkBox_viewed.isChecked()
@@ -95,10 +94,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         """ button btn_delete_by_id """
         # if id_row == -1:
         #     id_row = Movies.select().order_by(Movies.id.desc()).get()
-        try:
-            Movies.select().where(Movies.id == id_row).get().delete_instance()
-        except Exception:
-            pass
+
+        Movies.select().where(Movies.id == id_row).get().delete_instance()
 
     @refresh_table
     def add_row(self, movie: Movies = None) -> Movies:
@@ -117,9 +114,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.create_qmessage_box_without_choice('', 'Записей в базе нет')
 
     def clear_all(self):
-        print('called clearAll')
         if self.create_qmessage_box('', 'Вы уверены?'):
-            print('YES clearAll')
             Movies.delete().execute()
             self.clear_table()
 
@@ -157,7 +152,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         ...
 
     def copy_item(self):
-        ...
+        """
+        где взять выделенную ячейку
+        """
+        item = Item
+        print(item.text())
+        #print(item.column(), item.row())
 
     def contextMenuEvent(self, event):
         """
@@ -183,7 +183,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         created in the menu bar.
         """
         action = context_menu.exec_(self.mapToGlobal(event.pos()))
-
         if action == copy_act:
             self.copy_item()
         if action == paste_act:
