@@ -1,4 +1,5 @@
 from functools import wraps
+from typing import List
 from PyQt5 import QtWidgets, uic
 from datetime import date
 from config import UI_MAIN_WINDOW, DESIGN_DIR
@@ -37,6 +38,8 @@ def refresh_table(func):
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     movies_list: QtWidgets.QTabWidget
+    copied_row: List[str] = []
+    column_name = ('title', 'production_year', 'viewed')
 
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
@@ -50,26 +53,28 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         #  self.create_table()
         self.create_menu()
         self.movies_list.itemChanged.connect(self.item_changed)
+        self.movies_list.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
         self.id_dict = {}  # можно использовать список /  можно удалить отсюда
         print_movies_from_db(self)
+        self.cell_data = ()
+
 
     #  @refresh_table
     def item_changed(self, item: QtWidgets.QTableWidgetItem):
-        column_name = ('title', 'production_year', 'viewed')
 
-        if column_name[item.column()] == 'title':
-            field = {column_name[item.column()]: item.text()}  # field for change {id: 'value'}
+        if self.column_name[item.column()] == 'title':
+            field = {self.column_name[item.column()]: item.text()}  # field for change {id: 'value'}
             result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
             #  result = Movies.update(title=item.text()) не работает
-        elif column_name[item.column()] == 'production_year':
+        elif self.column_name[item.column()] == 'production_year':
             try:
                 #  подключить виджет для корректного ввода данных?
-                field = {column_name[item.column()]: item.text()}
+                field = {self.column_name[item.column()]: item.text()}
                 result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
             except Exception:  #  peewee.
                 self.create_qmessage_box_without_choice('', "Неправильый формат даты\nправильно ГГГГ-ММ-ДД")
-        elif column_name[item.column()] == 'viewed':
-            field = {column_name[item.column()]: item.text() == 'True'}
+        elif self.column_name[item.column()] == 'viewed':
+            field = {self.column_name[item.column()]: item.text() == 'True'}
             result = Movies.update(**field).where(Movies.id == self.id_dict[item.row()]).execute()
 
     def clear_table(self):
@@ -148,16 +153,21 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         table_menu.addSeparator()
         table_menu.addAction(self.clear_table_act)
 
+    @refresh_table
     def paste_item(self):
-        ...
+        """
+        self.cells_data = (kghckhg, 2000-05-05, False)
+        """
+        # new_row_index = self.movies_list.rowCount() + 1
+        print(self.cells_data)
+        Movies.create(**self.cells_data)
+        # for column, cell_data in enumerate(self.cells_data):
+        #     self.movies_list.setItem(new_row_index, column, QtWidgets.QTableWidgetItem(cell_data))
 
     def copy_item(self):
-        """
-        где взять выделенную ячейку
-        """
-        item = Item
-        print(item.text())
-        #print(item.column(), item.row())
+        copied_row = sorted(self.movies_list.selectedIndexes())
+        # self.cells_data = (cell.data() for cell in copied_row)
+        # self.cells_data = {k: v.data() for v in copied_row for k in self.column_name}
 
     def contextMenuEvent(self, event):
         """
