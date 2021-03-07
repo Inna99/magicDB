@@ -155,19 +155,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     @refresh_table
     def paste_item(self):
-        """
-        self.cells_data = (kghckhg, 2000-05-05, False)
-        """
-        # new_row_index = self.movies_list.rowCount() + 1
         print(self.cells_data)
         Movies.create(**self.cells_data)
-        # for column, cell_data in enumerate(self.cells_data):
-        #     self.movies_list.setItem(new_row_index, column, QtWidgets.QTableWidgetItem(cell_data))
 
     def copy_item(self):
         copied_row = sorted(self.movies_list.selectedIndexes())
-        # self.cells_data = (cell.data() for cell in copied_row)
-        # self.cells_data = {k: v.data() for v in copied_row for k in self.column_name}
+        self.cells_data = {k: v.data() for k, v in zip(self.column_name, copied_row)}
 
     def contextMenuEvent(self, event):
         """
